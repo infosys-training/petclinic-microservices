@@ -264,7 +264,7 @@ services:
       discovery-server:
         condition: service_healthy
       admin-server:
-        condition: service_healthy
+        condition: service_started
       tracing-server:
         condition: service_healthy
     ports:

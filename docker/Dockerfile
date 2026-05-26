@@ -8,10 +8,15 @@ RUN java -Djarmode=layertools -jar application.jar extract
 FROM eclipse-temurin:17
 WORKDIR application
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
 ENV SPRING_PROFILES_ACTIVE=docker
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=40s \
+  CMD curl -f http://localhost:${EXPOSED_PORT}/actuator/health || exit 1
 
 COPY --from=builder application/dependencies/ ./
 

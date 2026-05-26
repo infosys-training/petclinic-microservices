@@ -6,6 +6,7 @@ RUN java -Djarmode=layertools -jar application.jar extract
 
 
 FROM eclipse-temurin:17
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR application
 
 ARG EXPOSED_PORT

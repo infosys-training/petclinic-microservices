@@ -62,6 +62,28 @@ The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*
 
+### Docker Architecture Enhancements
+
+The Docker Compose setup includes several production-readiness improvements:
+
+- **Health Checks**: All services have Docker health checks using Spring Boot Actuator (`/actuator/health`). Infrastructure services (Zipkin, Grafana, Prometheus) use their native health endpoints. This ensures proper startup ordering and service availability monitoring.
+- **Dedicated Docker Network**: All services communicate over a dedicated `petclinic-net` Docker bridge network for improved isolation and DNS-based service discovery.
+- **Nginx Reverse Proxy**: An Nginx reverse proxy serves as the single entry point on **port 80**, routing traffic to the API Gateway and monitoring dashboards. Access the application at `http://localhost` (port 80) instead of `http://localhost:8080`.
+- **Internal Service Isolation**: Domain services (customers, visits, vets, genai) no longer expose host ports directly — they are only reachable through the API Gateway within the Docker network.
+
+**Monitoring dashboards available through Nginx:**
+
+| Dashboard       | URL                                  |
+|-----------------|--------------------------------------|
+| Application     | http://localhost/                    |
+| Grafana         | http://localhost/grafana/            |
+| Prometheus      | http://localhost/prometheus/         |
+| Eureka          | http://localhost/eureka-dashboard/   |
+| Spring Boot Admin | http://localhost/admin/            |
+| Zipkin Tracing  | http://localhost/zipkin/             |
+
+Direct access to individual services is still available for debugging: Config Server (8888), Discovery Server (8761), Admin Server (9090), Tracing Server (9411), Grafana (3030), Prometheus (9091).
+
 
 ## Starting services locally with docker-compose and Java
 If you experience issues with running the system via docker-compose you can try running the `./scripts/run_all.sh` script that will start the infrastructure services via docker-compose and all the Java based applications via standard `nohup java -jar ...` command. The logs will be available under `${ROOT}/target/nameoftheapp.log`. 

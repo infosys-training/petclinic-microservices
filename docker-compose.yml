@@ -11,8 +11,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 30s
     ports:
      - 8888:8888
+    networks:
+      - petclinic-net
 
   discovery-server:
     image: springcommunity/spring-petclinic-discovery-server
@@ -26,11 +29,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 30s
     depends_on:
       config-server:
         condition: service_healthy
     ports:
      - 8761:8761
+    networks:
+      - petclinic-net
 
   customers-service:
     image: springcommunity/spring-petclinic-customers-service
@@ -44,8 +50,14 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-    ports:
-    - 8081:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - petclinic-net
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
@@ -59,8 +71,14 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-    ports:
-     - 8082:8082
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - petclinic-net
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
@@ -74,9 +92,14 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-    ports:
-     - 8083:8083
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - petclinic-net
 
   genai-service:
     image: springcommunity/spring-petclinic-genai-service
@@ -94,9 +117,14 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-    ports:
-     - 8084:8084
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - petclinic-net
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
@@ -110,8 +138,22 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
+      customers-service:
+        condition: service_healthy
+      visits-service:
+        condition: service_healthy
+      vets-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     ports:
      - 8080:8080
+    networks:
+      - petclinic-net
 
   tracing-server:
     image: openzipkin/zipkin
@@ -120,8 +162,16 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9411/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
      - 9411:9411
+    networks:
+      - petclinic-net
 
   admin-server:
     image: springcommunity/spring-petclinic-admin-server
@@ -135,8 +185,16 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     ports:
      - 9090:9090
+    networks:
+      - petclinic-net
 
   ## Grafana / Prometheus
 
@@ -147,8 +205,16 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
     - 3030:3000
+    networks:
+      - petclinic-net
 
   prometheus-server:
     build: ./docker/prometheus
@@ -157,5 +223,37 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
     - 9091:9090
+    networks:
+      - petclinic-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - petclinic-net
+    restart: unless-stopped
+
+networks:
+  petclinic-net:
+    driver: bridge

@@ -1,12 +1,14 @@
 FROM eclipse-temurin:17 AS builder
-WORKDIR application
+WORKDIR /application
 ARG ARTIFACT_NAME
 COPY ${ARTIFACT_NAME}.jar application.jar
 RUN java -Djarmode=layertools -jar application.jar extract
 
 
 FROM eclipse-temurin:17
-WORKDIR application
+WORKDIR /application
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl=7.* && rm -rf /var/lib/apt/lists/*
 
 ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}

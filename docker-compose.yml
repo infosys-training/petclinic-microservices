@@ -213,7 +213,7 @@ services:
         limits:
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/grafana/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -226,6 +226,10 @@ services:
   prometheus-server:
     build: ./docker/prometheus
     container_name: prometheus-server
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/'
     deploy:
       resources:
         limits:
@@ -258,10 +262,6 @@ services:
       start_period: 10s
     depends_on:
       api-gateway:
-        condition: service_healthy
-      admin-server:
-        condition: service_healthy
-      discovery-server:
         condition: service_healthy
       tracing-server:
         condition: service_healthy

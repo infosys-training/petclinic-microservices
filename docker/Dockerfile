@@ -6,12 +6,15 @@ RUN java -Djarmode=layertools -jar application.jar extract
 
 
 FROM eclipse-temurin:17
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR application
 
 ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
+ARG HEALTHCHECK_PATH=/actuator/health
 ENV SPRING_PROFILES_ACTIVE=docker
+ENV MANAGEMENT_PORT=${EXPOSED_PORT}
 
 COPY --from=builder application/dependencies/ ./
 
@@ -25,4 +28,8 @@ RUN true
 COPY --from=builder application/snapshot-dependencies/ ./
 RUN true
 COPY --from=builder application/application/ ./
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+  CMD curl -sf http://localhost:${EXPOSED_PORT}${HEALTHCHECK_PATH} || exit 1
+
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

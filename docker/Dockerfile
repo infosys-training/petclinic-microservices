@@ -1,3 +1,8 @@
+# Multi-stage Dockerfile for Spring Boot microservices using layertools.
+# Stage 1 (builder): extracts the fat JAR into separate layers for optimal caching.
+# Stage 2 (runtime): assembles the layers into a minimal runtime image.
+# Each service passes its own ARTIFACT_NAME and EXPOSED_PORT at build time.
+
 FROM eclipse-temurin:17 AS builder
 WORKDIR application
 ARG ARTIFACT_NAME

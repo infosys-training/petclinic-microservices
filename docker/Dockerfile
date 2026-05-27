@@ -14,9 +14,10 @@ ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
 ENV SPRING_PROFILES_ACTIVE=docker
+ENV SERVER_PORT=${EXPOSED_PORT}
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=40s \
-  CMD curl -f http://localhost:${EXPOSED_PORT}/actuator/health || exit 1
+  CMD curl -f http://localhost:${SERVER_PORT}/actuator/health || exit 1
 
 COPY --from=builder application/dependencies/ ./
 

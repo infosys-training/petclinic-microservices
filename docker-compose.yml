@@ -49,7 +49,7 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9411/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9411/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -215,7 +215,7 @@ services:
         limits:
           memory: 128M
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -223,6 +223,14 @@ services:
     depends_on:
       api-gateway:
         condition: service_healthy
+      admin-server:
+        condition: service_started
+      tracing-server:
+        condition: service_started
+      grafana-server:
+        condition: service_started
+      prometheus-server:
+        condition: service_started
     ports:
       - 80:80
     networks:
@@ -256,7 +264,7 @@ services:
         limits:
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9090/-/healthy || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

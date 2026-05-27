@@ -265,6 +265,7 @@ services:
     restart: unless-stopped
     networks:
       - frontend
+      - backend
 
 networks:
   frontend:

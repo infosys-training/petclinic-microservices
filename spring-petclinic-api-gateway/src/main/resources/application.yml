@@ -44,6 +44,11 @@ spring:
                 - StripPrefix=2
                 - CircuitBreaker=name=genaiCircuitBreaker,fallbackUri=/fallback
 
+management:
+  endpoint:
+    health:
+      show-details: always
+
 ---
 spring:
   config:

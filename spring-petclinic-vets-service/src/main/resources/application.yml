@@ -8,6 +8,11 @@ spring:
   profiles:
     active: production
 
+management:
+  endpoint:
+    health:
+      show-details: always
+
 ---
 spring:
   config:

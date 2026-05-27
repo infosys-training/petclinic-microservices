@@ -12,6 +12,7 @@ ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
 ENV SPRING_PROFILES_ACTIVE=docker
+ENV EXPOSED_PORT=${EXPOSED_PORT}
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*

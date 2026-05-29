@@ -62,6 +62,24 @@ The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*
 
+### Accessing services through the reverse proxy
+
+An Nginx reverse proxy is included and serves as the single entry point for all services on **port 80**.
+Once the stack is running, you can access:
+
+| URL                           | Service                |
+|-------------------------------|------------------------|
+| http://localhost/              | PetClinic UI (API Gateway) |
+| http://localhost/eureka/       | Eureka Discovery Dashboard |
+| http://localhost/config/       | Config Server            |
+| http://localhost/admin/        | Spring Boot Admin        |
+| http://localhost/zipkin/       | Zipkin Tracing UI        |
+| http://localhost/grafana/      | Grafana Dashboards       |
+| http://localhost/prometheus/   | Prometheus UI            |
+| http://localhost/nginx-health  | Nginx health check       |
+
+Individual service ports (8080, 8761, 8888, etc.) are still exposed for direct access if needed.
+
 
 ## Starting services locally with docker-compose and Java
 If you experience issues with running the system via docker-compose you can try running the `./scripts/run_all.sh` script that will start the infrastructure services via docker-compose and all the Java based applications via standard `nohup java -jar ...` command. The logs will be available under `${ROOT}/target/nameoftheapp.log`. 

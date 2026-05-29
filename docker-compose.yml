@@ -227,12 +227,16 @@ services:
   prometheus-server:
     build: ./docker/prometheus
     container_name: prometheus-server
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/prometheus/'
     deploy:
       resources:
         limits:
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/prometheus/-/healthy || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

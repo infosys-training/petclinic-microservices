@@ -7,12 +7,21 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-I", "http://config-server:8888"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     ports:
      - 8888:8888
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
 
   discovery-server:
     image: springcommunity/spring-petclinic-discovery-server
@@ -22,15 +31,25 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://discovery-server:8761"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+      start_period: 30s
     depends_on:
       config-server:
         condition: service_healthy
     ports:
      - 8761:8761
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
+      - frontend
 
   customers-service:
     image: springcommunity/spring-petclinic-customers-service
@@ -39,6 +58,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -46,6 +71,14 @@ services:
         condition: service_healthy
     ports:
     - 8081:8081
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
@@ -54,6 +87,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -61,6 +100,14 @@ services:
         condition: service_healthy
     ports:
      - 8082:8082
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
@@ -69,6 +116,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -76,7 +129,14 @@ services:
         condition: service_healthy
     ports:
      - 8083:8083
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
 
   genai-service:
     image: springcommunity/spring-petclinic-genai-service
@@ -89,6 +149,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -96,7 +162,14 @@ services:
         condition: service_healthy
     ports:
      - 8084:8084
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
@@ -105,6 +178,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -112,6 +191,15 @@ services:
         condition: service_healthy
     ports:
      - 8080:8080
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
+      - frontend
 
   tracing-server:
     image: openzipkin/zipkin
@@ -120,8 +208,24 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
      - 9411:9411
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
+      - frontend
+      - monitoring
 
   admin-server:
     image: springcommunity/spring-petclinic-admin-server
@@ -130,6 +234,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       config-server:
         condition: service_healthy
@@ -137,6 +247,15 @@ services:
         condition: service_healthy
     ports:
      - 9090:9090
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
+      - frontend
 
   ## Grafana / Prometheus
 
@@ -147,8 +266,26 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      loki:
+        condition: service_healthy
     ports:
     - 3030:3000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - frontend
+      - monitoring
 
   prometheus-server:
     build: ./docker/prometheus
@@ -157,5 +294,121 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
     - 9091:9090
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - backend
+      - frontend
+      - monitoring
+
+  ## Centralized Logging
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./docker/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --output-document=- http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    ports:
+      - 3100:3100
+    networks:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./docker/loki/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+  ## Reverse Proxy
+
+  nginx-proxy:
+    image: nginx:1.27-alpine
+    container_name: nginx-proxy
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --output-document=/dev/null http://localhost:80/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      admin-server:
+        condition: service_healthy
+      grafana-server:
+        condition: service_healthy
+      prometheus-server:
+        condition: service_healthy
+      tracing-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+      - 80:80
+      - 443:443
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    networks:
+      - frontend
+
+volumes:
+  loki-data:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
+    name: petclinic-backend
+  frontend:
+    driver: bridge
+    name: petclinic-frontend
+  monitoring:
+    driver: bridge
+    name: petclinic-monitoring

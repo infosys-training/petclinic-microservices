@@ -1,0 +1,4 @@
+# Do not commit TLS certificates — generate them locally
+*.crt
+*.key
+*.pem

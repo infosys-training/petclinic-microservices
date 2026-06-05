@@ -29,6 +29,7 @@
         <!-- Naming conventions -->
         <module name="ConstantName">
             <property name="severity" value="warning"/>
+            <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$|^log$"/>
         </module>
         <module name="LocalVariableName"/>
         <module name="MemberName"/>

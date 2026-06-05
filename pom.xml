@@ -84,7 +84,7 @@
                     <configLocation>checkstyle.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
                     <failOnViolation>true</failOnViolation>
-                    <violationSeverity>error</violationSeverity>
+                    <violationSeverity>warning</violationSeverity>
                     <includeTestSourceRoots>true</includeTestSourceRoots>
                 </configuration>
                 <executions>

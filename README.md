@@ -62,6 +62,107 @@ The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*
 
+## Docker Health Checks
+
+Every service in `docker-compose.yml` is configured with a health check so that dependent services wait until their upstream dependencies are truly ready.
+
+| Service | Health Check Endpoint | Start Period |
+|---|---|---|
+| Config Server | `http://config-server:8888/actuator/health` | 30 s |
+| Discovery Server | `http://discovery-server:8761/actuator/health` | 30 s |
+| Customers Service | `http://localhost:8081/actuator/health` | 40 s |
+| Visits Service | `http://localhost:8082/actuator/health` | 40 s |
+| Vets Service | `http://localhost:8083/actuator/health` | 40 s |
+| GenAI Service | `http://localhost:8084/actuator/health` | 40 s |
+| API Gateway | `http://localhost:8080/actuator/health` | 40 s |
+| Admin Server | `http://localhost:9090/actuator/health` | 40 s |
+| Tracing Server (Zipkin) | `http://localhost:9411/health` | 15 s |
+| Grafana | `http://localhost:3000/api/health` | 15 s |
+| Prometheus | `http://localhost:9090/-/healthy` | 15 s |
+| NGINX Proxy | `http://localhost:80/nginx-health` | 10 s |
+
+The shared `docker/Dockerfile` also embeds a generic `HEALTHCHECK` instruction that hits `/actuator/health` on the exposed port.
+
+### Checking health status
+
+```bash
+# Show the health status of every container
+docker compose ps
+
+# Inspect the health log of a specific service
+docker inspect --format='{{json .State.Health}}' config-server
+```
+
+## NGINX Reverse Proxy
+
+An **NGINX** reverse proxy (`nginx-proxy` service) sits in front of all services and exposes a single entry point on **port 80**.
+
+| Path | Backend | Direct Port |
+|---|---|---|
+| `/` (default) | API Gateway | 8080 |
+| `/eureka/` | Discovery Server | 8761 |
+| `/config/` | Config Server | 8888 |
+| `/admin/` | Admin Server | 9090 |
+| `/zipkin/` | Tracing Server (Zipkin) | 9411 |
+| `/grafana/` | Grafana | 3030 → 3000 |
+| `/prometheus/` | Prometheus | 9091 → 9090 |
+| `/nginx-health` | NGINX health check | — |
+
+The NGINX configuration is at `docker/nginx/nginx.conf`.
+
+### Accessing services through the proxy
+
+Once all services are healthy:
+
+```
+PetClinic UI        → http://localhost/
+Eureka Dashboard    → http://localhost/eureka/
+Config Server       → http://localhost/config/
+Admin Server        → http://localhost/admin/
+Zipkin              → http://localhost/zipkin/
+Grafana             → http://localhost/grafana/
+Prometheus          → http://localhost/prometheus/
+```
+
+Individual services remain directly accessible on their original ports (8080, 8761, etc.) for debugging.
+
+## Docker Networking
+
+All services are placed on a dedicated `petclinic-network` bridge network, enabling container-to-container communication by service name. The NGINX proxy uses the same network.
+
+## Quick Start (full stack with NGINX proxy)
+
+```bash
+# 1. Build Docker images
+./mvnw clean install -P buildDocker
+
+# 2. Start all services (including NGINX proxy)
+docker compose up -d
+
+# 3. Watch startup progress and health status
+docker compose ps          # overview
+docker compose logs -f     # streaming logs
+
+# 4. Open the application through the NGINX proxy
+#    http://localhost/
+
+# 5. Tear down
+docker compose down
+```
+
+### Verifying inter-service communication
+
+```bash
+# Eureka should list all registered services
+curl -s http://localhost:8761/eureka/apps | grep '<app>'
+
+# API Gateway should proxy to customers/vets/visits
+curl -s http://localhost/api/customer/owners | head -20
+curl -s http://localhost/api/vet/vets | head -20
+
+# Health checks via the proxy
+curl -s http://localhost/actuator/health
+```
 
 ## Starting services locally with docker-compose and Java
 If you experience issues with running the system via docker-compose you can try running the `./scripts/run_all.sh` script that will start the infrastructure services via docker-compose and all the Java based applications via standard `nohup java -jar ...` command. The logs will be available under `${ROOT}/target/nameoftheapp.log`. 

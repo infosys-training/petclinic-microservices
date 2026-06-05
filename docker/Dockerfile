@@ -12,6 +12,12 @@ ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
 ENV SPRING_PROFILES_ACTIVE=docker
+ENV SERVER_PORT=${EXPOSED_PORT}
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=40s \
+  CMD curl -sf http://localhost:${SERVER_PORT}/actuator/health || exit 1
 
 COPY --from=builder application/dependencies/ ./
 

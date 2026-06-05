@@ -7,12 +7,15 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-I", "http://config-server:8888"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 15s
       timeout: 5s
-      retries: 10
+      start_period: 60s
+      retries: 5
     ports:
      - 8888:8888
+    networks:
+      - backend
 
   discovery-server:
     image: springcommunity/spring-petclinic-discovery-server
@@ -22,15 +25,18 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://discovery-server:8761"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
     ports:
      - 8761:8761
+    networks:
+      - backend
 
   customers-service:
     image: springcommunity/spring-petclinic-customers-service
@@ -39,6 +45,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -46,6 +58,9 @@ services:
         condition: service_healthy
     ports:
     - 8081:8081
+    networks:
+      - backend
+      - monitoring
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
@@ -54,6 +69,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -61,6 +82,9 @@ services:
         condition: service_healthy
     ports:
      - 8082:8082
+    networks:
+      - backend
+      - monitoring
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
@@ -69,6 +93,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -76,7 +106,9 @@ services:
         condition: service_healthy
     ports:
      - 8083:8083
-
+    networks:
+      - backend
+      - monitoring
 
   genai-service:
     image: springcommunity/spring-petclinic-genai-service
@@ -89,6 +121,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -96,7 +134,9 @@ services:
         condition: service_healthy
     ports:
      - 8084:8084
-
+    networks:
+      - backend
+      - monitoring
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
@@ -105,6 +145,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -112,6 +158,10 @@ services:
         condition: service_healthy
     ports:
      - 8080:8080
+    networks:
+      - frontend
+      - backend
+      - monitoring
 
   tracing-server:
     image: openzipkin/zipkin
@@ -120,8 +170,16 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9411/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     ports:
      - 9411:9411
+    networks:
+      - backend
 
   admin-server:
     image: springcommunity/spring-petclinic-admin-server
@@ -130,6 +188,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     depends_on:
       config-server:
         condition: service_healthy
@@ -137,6 +201,9 @@ services:
         condition: service_healthy
     ports:
      - 9090:9090
+    networks:
+      - backend
+      - monitoring
 
   ## Grafana / Prometheus
 
@@ -147,8 +214,17 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     ports:
     - 3030:3000
+    networks:
+      - frontend
+      - monitoring
 
   prometheus-server:
     build: ./docker/prometheus
@@ -157,5 +233,48 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     ports:
     - 9091:9090
+    networks:
+      - monitoring
+      - backend
+
+  ## Reverse Proxy
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: unless-stopped
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
+    driver: bridge

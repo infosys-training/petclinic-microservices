@@ -9,9 +9,12 @@ FROM eclipse-temurin:17
 WORKDIR application
 
 ARG EXPOSED_PORT
+ENV SERVER_PORT=${EXPOSED_PORT}
 EXPOSE ${EXPOSED_PORT}
 
 ENV SPRING_PROFILES_ACTIVE=docker
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder application/dependencies/ ./
 
@@ -25,4 +28,8 @@ RUN true
 COPY --from=builder application/snapshot-dependencies/ ./
 RUN true
 COPY --from=builder application/application/ ./
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=40s \
+  CMD curl -f http://localhost:${SERVER_PORT}/actuator/health || exit 1
+
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

@@ -1,4 +1,37 @@
 services:
+
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--ping=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   config-server:
     image: springcommunity/spring-petclinic-config-server
     container_name: config-server
@@ -7,12 +40,23 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-I", "http://config-server:8888"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     ports:
-     - 8888:8888
+      - 8888:8888
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.config.rule=PathPrefix(`/config`)"
+      - "traefik.http.routers.config.entrypoints=web"
+      - "traefik.http.middlewares.config-strip.stripprefix.prefixes=/config"
+      - "traefik.http.routers.config.middlewares=config-strip"
+      - "traefik.http.services.config.loadbalancer.server.port=8888"
+      - "traefik.docker.network=petclinic-backend"
 
   discovery-server:
     image: springcommunity/spring-petclinic-discovery-server
@@ -22,15 +66,24 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://discovery-server:8761"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+      start_period: 30s
     depends_on:
       config-server:
         condition: service_healthy
     ports:
-     - 8761:8761
+      - 8761:8761
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.discovery.rule=PathPrefix(`/eureka`)"
+      - "traefik.http.routers.discovery.entrypoints=web"
+      - "traefik.http.services.discovery.loadbalancer.server.port=8761"
+      - "traefik.docker.network=petclinic-backend"
 
   customers-service:
     image: springcommunity/spring-petclinic-customers-service
@@ -39,13 +92,21 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-    - 8081:8081
+      - 8081:8081
+    networks:
+      - backend
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
@@ -54,13 +115,21 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8082:8082
+      - 8082:8082
+    networks:
+      - backend
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
@@ -69,14 +138,21 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8083:8083
-
+      - 8083:8083
+    networks:
+      - backend
 
   genai-service:
     image: springcommunity/spring-petclinic-genai-service
@@ -89,14 +165,21 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8084:8084
-
+      - 8084:8084
+    networks:
+      - backend
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
@@ -105,13 +188,29 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8080:8080
+      - 8080:8080
+    networks:
+      - frontend
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-gateway.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api-gateway.entrypoints=web"
+      - "traefik.http.routers.api-gateway.priority=1"
+      - "traefik.http.services.api-gateway.loadbalancer.server.port=8080"
+      - "traefik.docker.network=petclinic-frontend"
 
   tracing-server:
     image: openzipkin/zipkin
@@ -120,8 +219,22 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
-     - 9411:9411
+      - 9411:9411
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zipkin.rule=PathPrefix(`/zipkin`)"
+      - "traefik.http.routers.zipkin.entrypoints=web"
+      - "traefik.http.services.zipkin.loadbalancer.server.port=9411"
+      - "traefik.docker.network=petclinic-backend"
 
   admin-server:
     image: springcommunity/spring-petclinic-admin-server
@@ -130,13 +243,29 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 9090:9090
+      - 9090:9090
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=PathPrefix(`/admin`)"
+      - "traefik.http.routers.admin.entrypoints=web"
+      - "traefik.http.middlewares.admin-strip.stripprefix.prefixes=/admin"
+      - "traefik.http.routers.admin.middlewares=admin-strip"
+      - "traefik.http.services.admin.loadbalancer.server.port=9090"
+      - "traefik.docker.network=petclinic-backend"
 
   ## Grafana / Prometheus
 
@@ -147,8 +276,25 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     ports:
-    - 3030:3000
+      - 3030:3000
+    networks:
+      - monitoring
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.middlewares.grafana-strip.stripprefix.prefixes=/grafana"
+      - "traefik.http.routers.grafana.middlewares=grafana-strip"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.docker.network=petclinic-monitoring"
 
   prometheus-server:
     build: ./docker/prometheus
@@ -157,5 +303,33 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
-    - 9091:9090
+      - 9091:9090
+    networks:
+      - monitoring
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=PathPrefix(`/prometheus`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus"
+      - "traefik.http.routers.prometheus.middlewares=prometheus-strip"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.docker.network=petclinic-monitoring"
+
+networks:
+  frontend:
+    name: petclinic-frontend
+    driver: bridge
+  backend:
+    name: petclinic-backend
+    driver: bridge
+  monitoring:
+    name: petclinic-monitoring
+    driver: bridge

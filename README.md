@@ -83,9 +83,9 @@ Every service in the Docker Compose stack has a `healthcheck` definition:
 | API Gateway | `http://localhost:8080/actuator/health` | 10s | 10 |
 | Admin Server | `http://localhost:9090/actuator/health` | 10s | 10 |
 | Tracing Server (Zipkin) | `http://localhost:9411/health` | 10s | 5 |
-| Grafana | `http://localhost:3000/api/health` | 10s | 5 |
+| Grafana | `http://localhost:3000/api/health` (curl) | 10s | 5 |
 | Prometheus | `http://localhost:9090/-/healthy` | 10s | 5 |
-| Nginx Proxy | `http://localhost:80/nginx-health` | 10s | 5 |
+| Nginx Proxy | `http://127.0.0.1:80/nginx-health` | 10s | 5 |
 
 You can check the health status of all containers with:
 ```bash

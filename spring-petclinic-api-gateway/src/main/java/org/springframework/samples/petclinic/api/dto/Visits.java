@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * @author Maciej Szarlinski
  */
-public record Visits (
+public record Visits(
     List<VisitDetails> items
 ) {
     public Visits() {

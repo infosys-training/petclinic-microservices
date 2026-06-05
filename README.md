@@ -62,6 +62,55 @@ The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*
 
+### Docker Networking
+
+All services are connected through a dedicated `petclinic-network` bridge network, which enables
+container-to-container communication using service names as hostnames. This replaces the default
+Docker Compose network with an explicit, named network for better isolation and visibility.
+
+### Health Checks
+
+Every service in the Docker Compose stack has a `healthcheck` definition:
+
+| Service | Endpoint | Interval | Retries |
+|---------|----------|----------|---------|
+| Config Server | `http://config-server:8888` | 5s | 10 |
+| Discovery Server | `http://discovery-server:8761` | 5s | 10 |
+| Customers Service | `http://localhost:8081/actuator/health` | 10s | 10 |
+| Visits Service | `http://localhost:8082/actuator/health` | 10s | 10 |
+| Vets Service | `http://localhost:8083/actuator/health` | 10s | 10 |
+| GenAI Service | `http://localhost:8084/actuator/health` | 10s | 10 |
+| API Gateway | `http://localhost:8080/actuator/health` | 10s | 10 |
+| Admin Server | `http://localhost:9090/actuator/health` | 10s | 10 |
+| Tracing Server (Zipkin) | `http://localhost:9411/health` | 10s | 5 |
+| Grafana | `http://localhost:3000/api/health` (curl) | 10s | 5 |
+| Prometheus | `http://localhost:9090/-/healthy` | 10s | 5 |
+| Nginx Proxy | `http://127.0.0.1:80/nginx-health` | 10s | 5 |
+
+You can check the health status of all containers with:
+```bash
+docker compose ps
+```
+
+### Nginx Reverse Proxy
+
+An Nginx reverse proxy (`nginx-proxy`) is included as the single entry point for all services.
+It listens on port **80** and routes traffic as follows:
+
+| Path | Backend Service | Direct Port |
+|------|----------------|-------------|
+| `/` | API Gateway | 8080 |
+| `/eureka/` | Discovery Server | 8761 |
+| `/config/` | Config Server | 8888 |
+| `/admin/` | Admin Server | 9090 |
+| `/zipkin/` | Tracing Server (Zipkin) | 9411 |
+| `/grafana/` | Grafana | 3030 |
+| `/prometheus/` | Prometheus | 9091 |
+
+Once the stack is running, access the application at: **http://localhost**
+
+Individual services are still accessible on their direct ports if needed for debugging.
+
 
 ## Starting services locally with docker-compose and Java
 If you experience issues with running the system via docker-compose you can try running the `./scripts/run_all.sh` script that will start the infrastructure services via docker-compose and all the Java based applications via standard `nohup java -jar ...` command. The logs will be available under `${ROOT}/target/nameoftheapp.log`. 

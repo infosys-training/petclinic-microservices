@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- File length -->
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
+
+    <!-- No trailing whitespace -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing whitespace."/>
+        <property name="severity" value="info"/>
+    </module>
+
+    <!-- Newline at end of file -->
+    <module name="NewlineAtEndOfFile">
+        <property name="severity" value="info"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Naming conventions -->
+        <module name="ConstantName">
+            <property name="severity" value="warning"/>
+        </module>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="MethodName"/>
+        <module name="PackageName"/>
+        <module name="ParameterName"/>
+        <module name="TypeName"/>
+
+        <!-- Imports -->
+        <module name="AvoidStarImport">
+            <property name="severity" value="warning"/>
+        </module>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- Whitespace -->
+        <module name="GenericWhitespace"/>
+        <module name="MethodParamPad"/>
+        <module name="NoWhitespaceBefore"/>
+        <module name="ParenPad"/>
+        <module name="TypecastParenPad"/>
+        <module name="WhitespaceAfter"/>
+
+        <!-- Coding -->
+        <module name="EmptyStatement"/>
+        <module name="EqualsHashCode"/>
+        <module name="MissingSwitchDefault">
+            <property name="severity" value="warning"/>
+        </module>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+
+        <!-- Design -->
+        <module name="FinalClass">
+            <property name="severity" value="info"/>
+        </module>
+        <module name="HideUtilityClassConstructor">
+            <property name="severity" value="info"/>
+        </module>
+
+        <!-- Miscellaneous -->
+        <module name="ArrayTypeStyle"/>
+        <module name="UpperEll"/>
+
+        <!-- Modifier -->
+        <module name="ModifierOrder"/>
+
+        <!-- Suppress warnings via annotation -->
+        <module name="SuppressWarningsHolder"/>
+    </module>
+
+    <module name="SuppressWarningsFilter"/>
+</module>

@@ -15,6 +15,7 @@
  */
 package org.springframework.samples.petclinic.customers.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.core.style.ToStringCreator;
@@ -43,6 +44,7 @@ public class Pet {
 
     @Column(name = "birth_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date birthDate;
 
     @ManyToOne

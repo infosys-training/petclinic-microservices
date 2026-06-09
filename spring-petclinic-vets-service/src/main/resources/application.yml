@@ -8,6 +8,15 @@ spring:
   profiles:
     active: production
 
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 ---
 spring:
   config:

@@ -10,3 +10,12 @@ spring:
         native:
           searchLocations: file:///${GIT_REPO}
 
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

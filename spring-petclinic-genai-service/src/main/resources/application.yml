@@ -29,6 +29,15 @@ spring:
             model: gpt-4o-mini
 
 
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 logging:
   level:
     org:

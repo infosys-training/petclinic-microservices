@@ -62,6 +62,83 @@ The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*
 
+## Docker Architecture
+
+### Networks
+
+The Docker Compose setup uses three isolated bridge networks to separate concerns:
+
+| Network      | Purpose                                                        | Services                                                          |
+|--------------|----------------------------------------------------------------|-------------------------------------------------------------------|
+| `frontend`   | Public-facing traffic between the reverse proxy and API Gateway | `nginx-proxy`, `api-gateway`                                      |
+| `backend`    | Internal service mesh for all microservices and infrastructure  | All Spring Boot services, Zipkin, Prometheus, Grafana              |
+| `monitoring` | Observability stack communication                               | `grafana-server`, `prometheus-server`, `nginx-proxy`              |
+
+The API Gateway bridges the `frontend` and `backend` networks. The Nginx reverse proxy connects to all three networks to route traffic appropriately.
+
+### Reverse Proxy (Nginx)
+
+An Nginx reverse proxy (`nginx-proxy`) serves as the **single entry point** on **port 80**. It routes traffic to backend services by URL path:
+
+| Path            | Backend Service          | Internal Port |
+|-----------------|--------------------------|---------------|
+| `/`             | API Gateway              | 8080          |
+| `/eureka/`      | Discovery Server         | 8761          |
+| `/config/`      | Config Server            | 8888          |
+| `/admin/`       | Spring Boot Admin Server | 9090          |
+| `/zipkin/`      | Zipkin Tracing Server    | 9411          |
+| `/grafana/`     | Grafana                  | 3000          |
+| `/prometheus/`  | Prometheus               | 9090          |
+| `/nginx-health` | Nginx health check       | —             |
+
+All upstream resolution uses Docker's embedded DNS (`127.0.0.11`) with Nginx variables, so services are resolved at request time (not at startup). This means Nginx can start even if backend services aren't ready yet.
+
+### Health Checks
+
+Every service has a Docker health check configured in `docker-compose.yml`:
+
+| Service            | Health Endpoint                         | Start Period | Notes                          |
+|--------------------|-----------------------------------------|--------------|--------------------------------|
+| config-server      | `http://localhost:8888/actuator/health` | 30s          | Must start first               |
+| discovery-server   | `http://localhost:8761/actuator/health` | 30s          | Depends on config-server       |
+| customers-service  | `http://localhost:8081/actuator/health` | 40s          | Depends on config + discovery  |
+| visits-service     | `http://localhost:8082/actuator/health` | 40s          | Depends on config + discovery  |
+| vets-service       | `http://localhost:8083/actuator/health` | 40s          | Depends on config + discovery  |
+| genai-service      | `http://localhost:8084/actuator/health` | 40s          | Depends on config + discovery  |
+| api-gateway        | `http://localhost:8080/actuator/health` | 40s          | Depends on config + discovery  |
+| admin-server       | `http://localhost:9090/actuator/health` | 40s          | Depends on config + discovery  |
+| tracing-server     | `http://localhost:9411/health`          | 20s          | Standalone (Zipkin)            |
+| grafana-server     | `http://localhost:3000/api/health`      | 10s          | Uses `wget` (Alpine image)     |
+| prometheus-server  | `http://localhost:9090/-/healthy`       | 10s          | Uses `wget` (Alpine image)     |
+| nginx-proxy        | `http://localhost:80/nginx-health`      | 10s          | Uses `wget` (Alpine image)     |
+
+All health checks use `localhost` to avoid DNS resolution issues during container startup. The `start_period` accounts for JVM startup time on Spring Boot services.
+
+### Startup Order
+
+Service startup is coordinated using `depends_on` with `condition: service_healthy`:
+
+1. **Config Server** — starts first with no dependencies
+2. **Discovery Server** — waits for Config Server to be healthy
+3. **Application services** (customers, visits, vets, genai, api-gateway, admin) — wait for both Config Server and Discovery Server
+4. **Nginx Reverse Proxy** — waits for API Gateway to be healthy
+5. **Tracing, Grafana, Prometheus** — start independently (no Spring Cloud dependencies)
+
+### Accessing Services
+
+After running `docker compose up`, access all services through the Nginx reverse proxy on port 80:
+
+| URL                         | Service                |
+|-----------------------------|------------------------|
+| `http://localhost/`         | PetClinic Application  |
+| `http://localhost/eureka/`  | Eureka Dashboard       |
+| `http://localhost/config/`  | Config Server          |
+| `http://localhost/admin/`   | Spring Boot Admin      |
+| `http://localhost/zipkin/`  | Zipkin Tracing UI      |
+| `http://localhost/grafana/` | Grafana Dashboards     |
+| `http://localhost/prometheus/` | Prometheus UI       |
+
+Individual services are also accessible on their direct ports (8080, 8761, 8888, etc.) for development and debugging.
 
 ## Starting services locally with docker-compose and Java
 If you experience issues with running the system via docker-compose you can try running the `./scripts/run_all.sh` script that will start the infrastructure services via docker-compose and all the Java based applications via standard `nohup java -jar ...` command. The logs will be available under `${ROOT}/target/nameoftheapp.log`. 

@@ -1,85 +1,156 @@
 services:
   config-server:
-    image: springcommunity/spring-petclinic-config-server
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-config-server-4.0.1
+        ARTIFACT_PATH: spring-petclinic-config-server/target/spring-petclinic-config-server-4.0.1.jar
+        EXPOSED_PORT: 8888
+    image: petclinic/spring-petclinic-config-server
     container_name: config-server
     deploy:
       resources:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-I", "http://config-server:8888"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     ports:
-     - 8888:8888
+      - 8888:8888
+    networks:
+      - backend
 
   discovery-server:
-    image: springcommunity/spring-petclinic-discovery-server
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-discovery-server-4.0.1
+        ARTIFACT_PATH: spring-petclinic-discovery-server/target/spring-petclinic-discovery-server-4.0.1.jar
+        EXPOSED_PORT: 8761
+    image: petclinic/spring-petclinic-discovery-server
     container_name: discovery-server
     deploy:
       resources:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://discovery-server:8761"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+      start_period: 30s
     depends_on:
       config-server:
         condition: service_healthy
     ports:
-     - 8761:8761
+      - 8761:8761
+    networks:
+      - backend
 
   customers-service:
-    image: springcommunity/spring-petclinic-customers-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-customers-service-4.0.1
+        ARTIFACT_PATH: spring-petclinic-customers-service/target/spring-petclinic-customers-service-4.0.1.jar
+        EXPOSED_PORT: 8081
+    image: petclinic/spring-petclinic-customers-service
     container_name: customers-service
     deploy:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-    - 8081:8081
+      - 8081:8081
+    networks:
+      - backend
 
   visits-service:
-    image: springcommunity/spring-petclinic-visits-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-visits-service-4.0.1
+        ARTIFACT_PATH: spring-petclinic-visits-service/target/spring-petclinic-visits-service-4.0.1.jar
+        EXPOSED_PORT: 8082
+    image: petclinic/spring-petclinic-visits-service
     container_name: visits-service
     deploy:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8082:8082
+      - 8082:8082
+    networks:
+      - backend
 
   vets-service:
-    image: springcommunity/spring-petclinic-vets-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-vets-service-4.0.1
+        ARTIFACT_PATH: spring-petclinic-vets-service/target/spring-petclinic-vets-service-4.0.1.jar
+        EXPOSED_PORT: 8083
+    image: petclinic/spring-petclinic-vets-service
     container_name: vets-service
     deploy:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8083:8083
-
+      - 8083:8083
+    networks:
+      - backend
 
   genai-service:
-    image: springcommunity/spring-petclinic-genai-service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-genai-service-4.0.1
+        ARTIFACT_PATH: spring-petclinic-genai-service/target/spring-petclinic-genai-service-4.0.1.jar
+        EXPOSED_PORT: 8084
+    image: petclinic/spring-petclinic-genai-service
     container_name: genai-service
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -89,29 +160,82 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8084:8084
-
+      - 8084:8084
+    networks:
+      - backend
 
   api-gateway:
-    image: springcommunity/spring-petclinic-api-gateway
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-api-gateway-4.0.1
+        ARTIFACT_PATH: spring-petclinic-api-gateway/target/spring-petclinic-api-gateway-4.0.1.jar
+        EXPOSED_PORT: 8080
+    image: petclinic/spring-petclinic-api-gateway
     container_name: api-gateway
     deploy:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
     ports:
-     - 8080:8080
+      - 8080:8080
+    networks:
+      - frontend
+      - backend
+
+  admin-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ARTIFACT_NAME: spring-petclinic-admin-server-4.0.1
+        ARTIFACT_PATH: spring-petclinic-admin-server/target/spring-petclinic-admin-server-4.0.1.jar
+        EXPOSED_PORT: 9090
+    image: petclinic/spring-petclinic-admin-server
+    container_name: admin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+      - 9090:9090
+    networks:
+      - backend
 
   tracing-server:
     image: openzipkin/zipkin
@@ -120,25 +244,16 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
-     - 9411:9411
-
-  admin-server:
-    image: springcommunity/spring-petclinic-admin-server
-    container_name: admin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
-    ports:
-     - 9090:9090
-
-  ## Grafana / Prometheus
+      - 9411:9411
+    networks:
+      - backend
 
   grafana-server:
     build: ./docker/grafana
@@ -147,8 +262,17 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
-    - 3030:3000
+      - 3030:3000
+    networks:
+      - monitoring
+      - backend
 
   prometheus-server:
     build: ./docker/prometheus
@@ -157,5 +281,43 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
-    - 9091:9090
+      - 9091:9090
+    networks:
+      - monitoring
+      - backend
+
+  nginx-proxy:
+    image: nginx:1.27-alpine
+    container_name: nginx-proxy
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    ports:
+      - 80:80
+    networks:
+      - frontend
+      - backend
+      - monitoring
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
+    driver: bridge

@@ -1,0 +1,186 @@
+<div class="dispute-container">
+    <div class="mb-3">
+        <button class="btn btn-outline-secondary" ng-click="$ctrl.goBack()">
+            <span class="fa fa-arrow-left"></span> Back to Disputes
+        </button>
+    </div>
+
+    <div class="text-center" ng-if="$ctrl.loading">
+        <span class="fa fa-spinner fa-spin fa-3x"></span>
+        <p class="mt-2">Loading dispute details...</p>
+    </div>
+
+    <div ng-if="!$ctrl.loading && !$ctrl.dispute" class="alert alert-warning">
+        Dispute not found.
+    </div>
+
+    <div ng-if="$ctrl.dispute">
+        <!-- Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2>
+                            <span class="fa fa-shield"></span>
+                            Dispute {{$ctrl.dispute.disputeId}}
+                        </h2>
+                        <p class="text-muted mb-0">
+                            Filed by <strong>{{$ctrl.dispute.submission.customerName}}</strong>
+                            for transaction <strong>{{$ctrl.dispute.submission.transactionId}}</strong>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <h3>
+                            <span class="badge" ng-class="$ctrl.getStatusBadgeClass()">{{$ctrl.dispute.status}}</span>
+                        </h3>
+                        <h4>
+                            <span class="fa" ng-class="$ctrl.getDecisionIcon()"></span>
+                            <strong>{{$ctrl.dispute.decision}}</strong>
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dispute Summary -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Amount</h5>
+                        <h3>${{$ctrl.dispute.submission.amount | number:2}}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Type</h5>
+                        <h3 style="font-size: 1.2rem;">{{$ctrl.dispute.disputeType}}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Risk Score</h5>
+                        <h3 ng-class="{'text-success': $ctrl.dispute.riskScore < 40, 'text-warning': $ctrl.dispute.riskScore >= 40 && $ctrl.dispute.riskScore < 70, 'text-danger': $ctrl.dispute.riskScore >= 70}">
+                            {{$ctrl.dispute.riskScore | number:0}}/100
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Channel</h5>
+                        <h3 style="font-size: 1.2rem;">{{$ctrl.dispute.submission.channel}}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Description -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><span class="fa fa-comment"></span> Customer Issue Description</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0" style="font-style: italic;">"{{$ctrl.dispute.submission.issueDescription}}"</p>
+            </div>
+        </div>
+
+        <!-- AI Agent Pipeline -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><span class="fa fa-cogs"></span> AI Agent Processing Pipeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="agent-pipeline">
+                    <div class="agent-step" ng-repeat="result in $ctrl.dispute.agentResults track by $index">
+                        <div class="d-flex align-items-start mb-3 p-3 border rounded"
+                             ng-style="{'border-left': '4px solid ' + $ctrl.getAgentColor(result.agentName) + ' !important'}">
+                            <div class="me-3 text-center" style="min-width: 50px;">
+                                <span class="fa fa-2x" ng-class="$ctrl.getAgentIcon(result.agentName)"
+                                      ng-style="{'color': $ctrl.getAgentColor(result.agentName)}"></span>
+                                <div class="mt-1">
+                                    <small class="badge bg-success" ng-if="result.status === 'SUCCESS'">OK</small>
+                                    <small class="badge bg-warning" ng-if="result.status === 'WARNING'">WARN</small>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <strong>{{result.agentName}}</strong>
+                                    <small class="text-muted ms-2">({{result.processingTimeMs}}ms)</small>
+                                </h6>
+                                <p class="mb-2">{{result.summary}}</p>
+                                <div ng-if="result.details">
+                                    <div ng-repeat="(key, value) in result.details" class="small text-muted"
+                                         ng-if="key !== 'communicationText' && key !== 'evidenceItems' && key !== 'riskFactors'">
+                                        <strong>{{key}}:</strong> {{value}}
+                                    </div>
+                                    <!-- Risk Factors -->
+                                    <div ng-if="result.details.riskFactors">
+                                        <strong class="small">Risk Factors:</strong>
+                                        <ul class="small mb-0">
+                                            <li ng-repeat="factor in result.details.riskFactors">{{factor}}</li>
+                                        </ul>
+                                    </div>
+                                    <!-- Evidence Items -->
+                                    <div ng-if="result.details.evidenceItems">
+                                        <strong class="small">Evidence Collected:</strong>
+                                        <div class="table-responsive mt-1">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead>
+                                                    <tr><th>Type</th><th>Source</th><th>Status</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr ng-repeat="ev in result.details.evidenceItems">
+                                                        <td>{{ev.type}}</td>
+                                                        <td>{{ev.source}}</td>
+                                                        <td>
+                                                            <span class="badge" ng-class="{'bg-success': ev.status === 'Retrieved', 'bg-warning': ev.status === 'Pending'}">
+                                                                {{ev.status}}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center" ng-if="!$last">
+                            <span class="fa fa-arrow-down text-muted"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Communication Sent -->
+        <div class="card mb-4" ng-if="$ctrl.dispute.communicationSent">
+            <div class="card-header">
+                <h5 class="mb-0"><span class="fa fa-envelope"></span> Communication Sent to Customer</h5>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{$ctrl.dispute.communicationSent}}</pre>
+            </div>
+        </div>
+
+        <!-- Decision Details -->
+        <div class="card mb-4" ng-if="$ctrl.dispute.decisionReason">
+            <div class="card-header"
+                 ng-class="{'bg-success text-white': $ctrl.dispute.decision === 'APPROVE', 'bg-danger text-white': $ctrl.dispute.decision === 'REJECT', 'bg-warning': $ctrl.dispute.decision === 'ESCALATE'}">
+                <h5 class="mb-0">
+                    <span class="fa" ng-class="$ctrl.getDecisionIcon()"></span>
+                    Final Decision: {{$ctrl.dispute.decision}}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{$ctrl.dispute.decisionReason}}</p>
+            </div>
+        </div>
+    </div>
+</div>

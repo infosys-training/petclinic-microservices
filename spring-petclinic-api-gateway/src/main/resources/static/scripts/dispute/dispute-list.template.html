@@ -1,0 +1,200 @@
+<div class="dispute-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><span class="fa fa-shield"></span> AI Dispute Resolution Center</h2>
+        <button class="btn btn-primary" ng-click="$ctrl.toggleForm()">
+            <span class="fa fa-plus"></span>
+            {{$ctrl.showForm ? 'Cancel' : 'File New Dispute'}}
+        </button>
+    </div>
+
+    <!-- Architecture Overview -->
+    <div class="card mb-4" ng-if="!$ctrl.showForm && $ctrl.disputes.length === 0">
+        <div class="card-body">
+            <h4 class="card-title">Multi-Agent AI Dispute Resolution System</h4>
+            <p class="card-text">This system uses a pipeline of specialized AI agents to automatically process banking disputes:</p>
+            <div class="row text-center mt-3">
+                <div class="col-md-2">
+                    <div class="agent-box intake">
+                        <span class="fa fa-sign-in"></span>
+                        <div>AI Intake</div>
+                        <small>Extract Data</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="agent-box classifier">
+                        <span class="fa fa-tags"></span>
+                        <div>Classifier</div>
+                        <small>Categorize</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="agent-box fraud">
+                        <span class="fa fa-exclamation-triangle"></span>
+                        <div>Fraud Detection</div>
+                        <small>Risk Score</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="agent-box evidence">
+                        <span class="fa fa-folder-open"></span>
+                        <div>Evidence</div>
+                        <small>Collect Proof</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="agent-box decision">
+                        <span class="fa fa-gavel"></span>
+                        <div>Decision</div>
+                        <small>Approve/Reject</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="agent-box comms">
+                        <span class="fa fa-envelope"></span>
+                        <div>Communication</div>
+                        <small>Notify</small>
+                    </div>
+                </div>
+            </div>
+            <p class="text-center mt-3 text-muted">Click "File New Dispute" to see the AI agents in action.</p>
+        </div>
+    </div>
+
+    <!-- Submit Dispute Form -->
+    <div class="card mb-4" ng-if="$ctrl.showForm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><span class="fa fa-pencil"></span> Submit New Dispute</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger" ng-if="$ctrl.errorMessage">{{$ctrl.errorMessage}}</div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Customer Name *</label>
+                        <input type="text" class="form-control" ng-model="$ctrl.newDispute.customerName" placeholder="John Doe">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Customer Email</label>
+                        <input type="email" class="form-control" ng-model="$ctrl.newDispute.customerEmail" placeholder="john@example.com">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Transaction ID *</label>
+                        <input type="text" class="form-control" ng-model="$ctrl.newDispute.transactionId" placeholder="TXN-20240115-001">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Amount ($) *</label>
+                        <input type="number" class="form-control" ng-model="$ctrl.newDispute.amount" placeholder="150.00" step="0.01">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Card Last 4 Digits</label>
+                        <input type="text" class="form-control" ng-model="$ctrl.newDispute.cardLast4" placeholder="4242" maxlength="4">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Merchant Name</label>
+                        <input type="text" class="form-control" ng-model="$ctrl.newDispute.merchantName" placeholder="Amazon.com">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Date</label>
+                        <input type="text" class="form-control" ng-model="$ctrl.newDispute.transactionDate" placeholder="2024-01-15">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Channel</label>
+                        <select class="form-control" ng-model="$ctrl.newDispute.channel">
+                            <option value="mobile_app">Mobile App</option>
+                            <option value="internet_banking">Internet Banking</option>
+                            <option value="chatbot">Chatbot</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Issue Description *</label>
+                <textarea class="form-control" rows="4" ng-model="$ctrl.newDispute.issueDescription"
+                          placeholder="Describe your issue... e.g., 'I was charged twice for a single purchase' or 'I see an unauthorized transaction I did not make'"></textarea>
+            </div>
+
+            <button class="btn btn-success btn-lg" ng-click="$ctrl.submitDispute()" ng-disabled="$ctrl.submitting">
+                <span class="fa fa-paper-plane"></span>
+                {{$ctrl.submitting ? 'Processing with AI Agents...' : 'Submit Dispute'}}
+            </button>
+            <span class="ms-3 text-muted" ng-if="$ctrl.submitting">
+                <span class="fa fa-spinner fa-spin"></span> AI agents are analyzing your dispute...
+            </span>
+        </div>
+    </div>
+
+    <!-- Dispute List -->
+    <div class="card" ng-if="$ctrl.disputes.length > 0">
+        <div class="card-header">
+            <h4 class="mb-0">Disputes ({{$ctrl.disputes.length}})</h4>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Dispute ID</th>
+                        <th>Customer</th>
+                        <th>Transaction</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Risk Score</th>
+                        <th>Status</th>
+                        <th>Decision</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="dispute in $ctrl.disputes track by dispute.disputeId">
+                        <td><strong>{{dispute.disputeId}}</strong></td>
+                        <td>{{dispute.submission.customerName}}</td>
+                        <td>{{dispute.submission.transactionId}}</td>
+                        <td>${{dispute.submission.amount | number:2}}</td>
+                        <td>{{dispute.disputeType}}</td>
+                        <td>
+                            <div class="progress" style="min-width: 80px; height: 20px;">
+                                <div class="progress-bar" role="progressbar"
+                                     ng-style="{'width': dispute.riskScore + '%'}"
+                                     ng-class="{'bg-success': dispute.riskScore < 40, 'bg-warning': dispute.riskScore >= 40 && dispute.riskScore < 70, 'bg-danger': dispute.riskScore >= 70}">
+                                    {{dispute.riskScore | number:0}}
+                                </div>
+                            </div>
+                        </td>
+                        <td><span ng-class="$ctrl.getStatusClass(dispute.status)">{{dispute.status}}</span></td>
+                        <td>
+                            <span ng-class="{'text-success': dispute.decision === 'APPROVE', 'text-danger': dispute.decision === 'REJECT', 'text-warning': dispute.decision === 'ESCALATE'}">
+                                <strong>{{dispute.decision}}</strong>
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" ng-click="$ctrl.viewDetail(dispute.disputeId)">
+                                <span class="fa fa-eye"></span> Details
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

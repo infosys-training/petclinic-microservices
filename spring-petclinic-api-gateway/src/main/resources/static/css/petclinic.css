@@ -9610,4 +9610,69 @@ strong {
     margin-top: 10px;
     margin-bottom: 30px; } }
 
+/* ===== Dispute Resolution AI Agent Styles ===== */
+
+.dispute-container {
+    padding: 20px 0;
+}
+
+.agent-box {
+    padding: 15px 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #fff;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.agent-box .fa {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.agent-box small {
+    opacity: 0.85;
+    font-size: 11px;
+}
+
+.agent-box.intake { background: #3498db; }
+.agent-box.classifier { background: #9b59b6; }
+.agent-box.fraud { background: #e74c3c; }
+.agent-box.evidence { background: #f39c12; }
+.agent-box.decision { background: #2ecc71; }
+.agent-box.comms { background: #1abc9c; }
+
+.agent-pipeline .agent-step {
+    position: relative;
+}
+
+.agent-pipeline .agent-step .border {
+    transition: box-shadow 0.2s;
+}
+
+.agent-pipeline .agent-step .border:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.dispute-container .progress {
+    border-radius: 10px;
+}
+
+.dispute-container .card {
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.dispute-container .card-header {
+    border-radius: 8px 8px 0 0;
+}
+
+.dispute-container .badge {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+}
+
 /*# sourceMappingURL=../../../../../target/petclinic.css.map */

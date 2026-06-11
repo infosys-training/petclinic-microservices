@@ -52,12 +52,38 @@ Once images are ready, you can start them with a single command
 `docker compose up` or `podman-compose up`. 
 
 Containers startup order is coordinated with the `service_healthy` condition of the Docker Compose [depends-on](https://github.com/compose-spec/compose-spec/blob/main/spec.md#depends_on) expression 
-and the [healthcheck](https://github.com/compose-spec/compose-spec/blob/main/spec.md#healthcheck) of the service containers. 
+and the [healthcheck](https://github.com/compose-spec/compose-spec/blob/main/spec.md#healthcheck) of the service containers.
+Every service in the Compose file defines a health check (Spring Boot services use `/actuator/health`), so dependent
+services only start once their upstream dependencies are confirmed healthy.
+
 After starting services, it takes a while for API Gateway to be in sync with service registry,
 so don't be scared of initial Spring Cloud Gateway timeouts. You can track services availability using Eureka dashboard
 available by default at http://localhost:8761.
 
 The `main` branch uses an Eclipse Temurin with Java 17 as Docker base image.
+
+### Reverse proxy (nginx)
+
+An nginx reverse proxy (`nginx-proxy`) sits in front of all services and exposes a single entry point on port **80**.
+It routes traffic as follows:
+
+| Path | Backend |
+|---|---|
+| `/` | API Gateway (`:8080`) |
+| `/admin/` | Spring Boot Admin (`:9090`) |
+| `/grafana/` | Grafana (`:3000`) |
+| `/prometheus/` | Prometheus (`:9090`) |
+| `/zipkin/` | Zipkin (`:9411`) |
+
+### Docker networks
+
+Three bridge networks isolate traffic:
+
+| Network | Purpose | Members |
+|---|---|---|
+| `petclinic-frontend` | External-facing traffic | nginx-proxy, api-gateway |
+| `petclinic-backend` | Inter-service communication | All Spring Boot services, Eureka, Config Server, Zipkin, Prometheus |
+| `petclinic-monitoring` | Observability stack | Admin Server, Grafana, Prometheus, Zipkin, nginx-proxy |
 
 *NOTE: Under MacOSX or Windows, make sure that the Docker VM has enough memory to run the microservices. The default settings
 are usually not enough and make the `docker-compose up` painfully slow.*

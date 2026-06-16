@@ -10,7 +10,7 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8888"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -28,7 +28,7 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8761"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -210,6 +210,9 @@ services:
   grafana-server:
     build: ./docker/grafana
     container_name: grafana-server
+    environment:
+      - GF_SERVER_ROOT_URL=http://localhost/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     deploy:
       resources:
         limits:
@@ -229,6 +232,10 @@ services:
   prometheus-server:
     build: ./docker/prometheus
     container_name: prometheus-server
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/'
     deploy:
       resources:
         limits:
@@ -253,7 +260,7 @@ services:
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/nginx-health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/nginx-health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

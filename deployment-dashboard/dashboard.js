@@ -1,44 +1,59 @@
 /**
  * PetClinic Microservices - Deployment Dashboard
- * Reads deployment data from a configurable JSON source and renders charts/tables.
+ * Consumes data from HarnessDataService and renders charts/tables.
  */
 
-const CONFIG = {
-    defaultDataSource: 'data/deployments.json',
-    colors: {
-        primary: '#2563eb',
-        success: '#16a34a',
-        danger: '#dc2626',
-        warning: '#d97706',
-        info: '#0891b2',
-        palette: [
-            '#2563eb', '#7c3aed', '#db2777', '#ea580c',
-            '#16a34a', '#0891b2', '#4f46e5', '#c026d3'
-        ]
-    }
+const CHART_COLORS = {
+    primary: '#2563eb',
+    success: '#16a34a',
+    danger: '#dc2626',
+    warning: '#d97706',
+    info: '#0891b2',
+    running: '#7c3aed',
+    palette: [
+        '#2563eb', '#7c3aed', '#db2777', '#ea580c',
+        '#16a34a', '#0891b2', '#4f46e5', '#c026d3'
+    ]
 };
 
 let chartInstances = {};
+let currentDeployments = [];
 
-async function loadData() {
-    const dataSource = document.getElementById('data-source').value || CONFIG.defaultDataSource;
-
+async function loadDashboard() {
     try {
-        const response = await fetch(dataSource);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        renderDashboard(data);
+        document.getElementById('loading-indicator').style.display = 'flex';
+
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const envFilter = document.getElementById('env-filter').value;
+        const triggerFilter = document.getElementById('trigger-filter').value;
+
+        const options = {
+            startDate: thirtyDaysAgo,
+            endDate: now,
+        };
+
+        if (envFilter) options.environments = [envFilter];
+
+        const { metadata, deployments } = await HarnessDataService.getDeployments(options);
+
+        // Apply trigger filter client-side
+        currentDeployments = triggerFilter
+            ? deployments.filter(d => d.triggerType === triggerFilter)
+            : deployments;
+
+        renderDashboard(currentDeployments, metadata);
     } catch (error) {
-        console.error('Failed to load deployment data:', error);
-        alert(`Failed to load data from "${dataSource}".\n\nError: ${error.message}\n\nMake sure the file exists and is valid JSON.`);
+        console.error('Dashboard load failed:', error);
+        alert(`Failed to load deployment data.\n\nError: ${error.message}`);
+    } finally {
+        document.getElementById('loading-indicator').style.display = 'none';
     }
 }
 
-function renderDashboard(data) {
-    const deployments = data.deployments || [];
-    const services = data.services || [...new Set(deployments.map(d => d.service))];
+function renderDashboard(deployments, metadata) {
+    const services = [...new Set(deployments.map(d => d.service))].sort();
 
     updateSummaryCards(deployments);
     renderPerServiceChart(deployments, services);
@@ -46,27 +61,37 @@ function renderDashboard(data) {
     renderTrendsChart(deployments);
     renderFailureRateChart(deployments, services);
     renderStatusDistributionChart(deployments);
+    renderEnvironmentChart(deployments);
+    renderTriggerChart(deployments);
     renderTable(deployments);
+    updateMetadata(metadata, deployments);
 }
 
 function updateSummaryCards(deployments) {
     const total = deployments.length;
     const successful = deployments.filter(d => d.status === 'success').length;
     const failed = deployments.filter(d => d.status === 'failed').length;
+    const running = deployments.filter(d => d.status === 'running').length;
     const rate = total > 0 ? ((successful / total) * 100).toFixed(1) : 0;
 
     document.getElementById('total-deployments').textContent = total;
     document.getElementById('successful-deployments').textContent = successful;
     document.getElementById('failed-deployments').textContent = failed;
+    document.getElementById('running-deployments').textContent = running;
     document.getElementById('success-rate').textContent = `${rate}%`;
+}
+
+function updateMetadata(metadata, deployments) {
+    const el = document.getElementById('data-source-info');
+    if (el) {
+        const source = metadata.source === 'mock-data' ? 'Mock Data (Harness Simulation)' : 'Harness API';
+        el.textContent = `Source: ${source} | ${deployments.length} records | Last updated: ${new Date().toLocaleTimeString()}`;
+    }
 }
 
 function renderPerServiceChart(deployments, services) {
     const ctx = document.getElementById('chart-per-service').getContext('2d');
-
-    const counts = services.map(service =>
-        deployments.filter(d => d.service === service).length
-    );
+    const counts = services.map(s => deployments.filter(d => d.service === s).length);
 
     destroyChart('chart-per-service');
     chartInstances['chart-per-service'] = new Chart(ctx, {
@@ -76,24 +101,17 @@ function renderPerServiceChart(deployments, services) {
             datasets: [{
                 label: 'Total Deployments',
                 data: counts,
-                backgroundColor: CONFIG.colors.palette.slice(0, services.length),
+                backgroundColor: CHART_COLORS.palette.slice(0, services.length),
                 borderRadius: 6,
                 borderSkipped: false
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                },
-                x: {
-                    ticks: { maxRotation: 45 }
-                }
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { ticks: { maxRotation: 45 } }
             }
         }
     });
@@ -102,12 +120,9 @@ function renderPerServiceChart(deployments, services) {
 function renderSuccessFailureChart(deployments, services) {
     const ctx = document.getElementById('chart-success-failure').getContext('2d');
 
-    const successCounts = services.map(service =>
-        deployments.filter(d => d.service === service && d.status === 'success').length
-    );
-    const failedCounts = services.map(service =>
-        deployments.filter(d => d.service === service && d.status === 'failed').length
-    );
+    const successCounts = services.map(s => deployments.filter(d => d.service === s && d.status === 'success').length);
+    const failedCounts = services.map(s => deployments.filter(d => d.service === s && d.status === 'failed').length);
+    const runningCounts = services.map(s => deployments.filter(d => d.service === s && d.status === 'running').length);
 
     destroyChart('chart-success-failure');
     chartInstances['chart-success-failure'] = new Chart(ctx, {
@@ -115,37 +130,17 @@ function renderSuccessFailureChart(deployments, services) {
         data: {
             labels: services.map(formatServiceName),
             datasets: [
-                {
-                    label: 'Success',
-                    data: successCounts,
-                    backgroundColor: CONFIG.colors.success,
-                    borderRadius: 6,
-                    borderSkipped: false
-                },
-                {
-                    label: 'Failed',
-                    data: failedCounts,
-                    backgroundColor: CONFIG.colors.danger,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }
+                { label: 'Success', data: successCounts, backgroundColor: CHART_COLORS.success, borderRadius: 6, borderSkipped: false },
+                { label: 'Failed', data: failedCounts, backgroundColor: CHART_COLORS.danger, borderRadius: 6, borderSkipped: false },
+                { label: 'Running', data: runningCounts, backgroundColor: CHART_COLORS.running, borderRadius: 6, borderSkipped: false },
             ]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { position: 'top' }
-            },
+            plugins: { legend: { position: 'top' } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 },
-                    stacked: true
-                },
-                x: {
-                    stacked: true,
-                    ticks: { maxRotation: 45 }
-                }
+                y: { beginAtZero: true, ticks: { stepSize: 1 }, stacked: true },
+                x: { stacked: true, ticks: { maxRotation: 45 } }
             }
         }
     });
@@ -153,24 +148,17 @@ function renderSuccessFailureChart(deployments, services) {
 
 function renderTrendsChart(deployments) {
     const ctx = document.getElementById('chart-trends').getContext('2d');
-
     const sorted = [...deployments].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const dateGroups = {};
 
+    const dateGroups = {};
     sorted.forEach(dep => {
         const date = dep.timestamp.split('T')[0];
-        if (!dateGroups[date]) {
-            dateGroups[date] = { success: 0, failed: 0, total: 0 };
-        }
+        if (!dateGroups[date]) dateGroups[date] = { success: 0, failed: 0, running: 0, total: 0 };
         dateGroups[date].total++;
-        if (dep.status === 'success') dateGroups[date].success++;
-        else dateGroups[date].failed++;
+        dateGroups[date][dep.status]++;
     });
 
     const dates = Object.keys(dateGroups);
-    const successData = dates.map(d => dateGroups[d].success);
-    const failedData = dates.map(d => dateGroups[d].failed);
-    const totalData = dates.map(d => dateGroups[d].total);
 
     destroyChart('chart-trends');
     chartInstances['chart-trends'] = new Chart(ctx, {
@@ -180,49 +168,33 @@ function renderTrendsChart(deployments) {
             datasets: [
                 {
                     label: 'Total',
-                    data: totalData,
-                    borderColor: CONFIG.colors.primary,
+                    data: dates.map(d => dateGroups[d].total),
+                    borderColor: CHART_COLORS.primary,
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
                 },
                 {
                     label: 'Successful',
-                    data: successData,
-                    borderColor: CONFIG.colors.success,
+                    data: dates.map(d => dateGroups[d].success),
+                    borderColor: CHART_COLORS.success,
                     backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
                 },
                 {
                     label: 'Failed',
-                    data: failedData,
-                    borderColor: CONFIG.colors.danger,
+                    data: dates.map(d => dateGroups[d].failed),
+                    borderColor: CHART_COLORS.danger,
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
                 }
             ]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { position: 'top' }
-            },
+            plugins: { legend: { position: 'top' } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                },
-                x: {
-                    ticks: { maxRotation: 45 }
-                }
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { ticks: { maxRotation: 45, maxTicksLimit: 15 } }
             }
         }
     });
@@ -230,13 +202,10 @@ function renderTrendsChart(deployments) {
 
 function renderFailureRateChart(deployments, services) {
     const ctx = document.getElementById('chart-failure-rate').getContext('2d');
-
-    const failureRates = services.map(service => {
-        const serviceDeployments = deployments.filter(d => d.service === service);
-        const failed = serviceDeployments.filter(d => d.status === 'failed').length;
-        return serviceDeployments.length > 0
-            ? ((failed / serviceDeployments.length) * 100).toFixed(1)
-            : 0;
+    const failureRates = services.map(s => {
+        const svcDeps = deployments.filter(d => d.service === s);
+        const failed = svcDeps.filter(d => d.status === 'failed').length;
+        return svcDeps.length > 0 ? ((failed / svcDeps.length) * 100).toFixed(1) : 0;
     });
 
     destroyChart('chart-failure-rate');
@@ -247,31 +216,18 @@ function renderFailureRateChart(deployments, services) {
             datasets: [{
                 label: 'Failure Rate (%)',
                 data: failureRates,
-                backgroundColor: failureRates.map(rate =>
-                    rate > 25 ? CONFIG.colors.danger :
-                    rate > 10 ? CONFIG.colors.warning :
-                    CONFIG.colors.success
+                backgroundColor: failureRates.map(r =>
+                    r > 25 ? CHART_COLORS.danger : r > 10 ? CHART_COLORS.warning : CHART_COLORS.success
                 ),
-                borderRadius: 6,
-                borderSkipped: false
+                borderRadius: 6, borderSkipped: false
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: value => value + '%'
-                    }
-                },
-                x: {
-                    ticks: { maxRotation: 45 }
-                }
+                y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                x: { ticks: { maxRotation: 45 } }
             }
         }
     });
@@ -279,28 +235,74 @@ function renderFailureRateChart(deployments, services) {
 
 function renderStatusDistributionChart(deployments) {
     const ctx = document.getElementById('chart-status-distribution').getContext('2d');
-
-    const successful = deployments.filter(d => d.status === 'success').length;
+    const success = deployments.filter(d => d.status === 'success').length;
     const failed = deployments.filter(d => d.status === 'failed').length;
+    const running = deployments.filter(d => d.status === 'running').length;
 
     destroyChart('chart-status-distribution');
     chartInstances['chart-status-distribution'] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Successful', 'Failed'],
+            labels: ['Successful', 'Failed', 'Running'],
             datasets: [{
-                data: [successful, failed],
-                backgroundColor: [CONFIG.colors.success, CONFIG.colors.danger],
-                borderWidth: 0,
-                spacing: 2
+                data: [success, failed, running],
+                backgroundColor: [CHART_COLORS.success, CHART_COLORS.danger, CHART_COLORS.running],
+                borderWidth: 0, spacing: 2
             }]
         },
         options: {
+            responsive: true, cutout: '65%',
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+function renderEnvironmentChart(deployments) {
+    const ctx = document.getElementById('chart-environments').getContext('2d');
+    const envs = ['dev', 'staging', 'prod'];
+    const envColors = { dev: '#0891b2', staging: '#d97706', prod: '#2563eb' };
+
+    const successByEnv = envs.map(e => deployments.filter(d => d.environment === e && d.status === 'success').length);
+    const failedByEnv = envs.map(e => deployments.filter(d => d.environment === e && d.status === 'failed').length);
+
+    destroyChart('chart-environments');
+    chartInstances['chart-environments'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: envs.map(e => e.charAt(0).toUpperCase() + e.slice(1)),
+            datasets: [
+                { label: 'Success', data: successByEnv, backgroundColor: CHART_COLORS.success, borderRadius: 6, borderSkipped: false },
+                { label: 'Failed', data: failedByEnv, backgroundColor: CHART_COLORS.danger, borderRadius: 6, borderSkipped: false }
+            ]
+        },
+        options: {
             responsive: true,
-            cutout: '65%',
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+function renderTriggerChart(deployments) {
+    const ctx = document.getElementById('chart-triggers').getContext('2d');
+    const triggers = ['webhook', 'manual', 'scheduled'];
+    const triggerColors = ['#2563eb', '#7c3aed', '#d97706'];
+    const counts = triggers.map(t => deployments.filter(d => d.triggerType === t).length);
+
+    destroyChart('chart-triggers');
+    chartInstances['chart-triggers'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: triggers.map(t => t.charAt(0).toUpperCase() + t.slice(1)),
+            datasets: [{
+                data: counts,
+                backgroundColor: triggerColors,
+                borderWidth: 0, spacing: 2
+            }]
+        },
+        options: {
+            responsive: true, cutout: '65%',
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -308,33 +310,31 @@ function renderStatusDistributionChart(deployments) {
 function renderTable(deployments) {
     const tbody = document.getElementById('deployments-tbody');
     const sorted = [...deployments].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const recent = sorted.slice(0, 50); // Show last 50
 
-    tbody.innerHTML = sorted.map(dep => `
+    tbody.innerHTML = recent.map(dep => `
         <tr>
             <td><code>${dep.id}</code></td>
             <td>${formatServiceName(dep.service)}</td>
+            <td class="pipeline-name">${dep.pipelineName || '-'}</td>
             <td>${formatTimestamp(dep.timestamp)}</td>
             <td>${dep.version || '-'}</td>
+            <td><span class="env-badge env-${dep.environment}">${dep.environment}</span></td>
+            <td><span class="trigger-badge trigger-${dep.triggerType}">${dep.triggerType}</span></td>
             <td><span class="status-badge status-${dep.status}">${dep.status}</span></td>
             <td>${dep.duration_seconds ? dep.duration_seconds + 's' : '-'}</td>
-            <td>${dep.error || '-'}</td>
+            <td class="error-cell">${dep.error || '-'}</td>
         </tr>
     `).join('');
 }
 
 function formatServiceName(service) {
-    return service
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
+    return service.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function formatTimestamp(ts) {
-    const date = new Date(ts);
-    return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    return new Date(ts).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 }
 
@@ -345,5 +345,5 @@ function destroyChart(id) {
     }
 }
 
-// Load data on page load
-document.addEventListener('DOMContentLoaded', loadData);
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', loadDashboard);

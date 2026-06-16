@@ -11,42 +11,76 @@
 <body>
     <header>
         <div class="header-content">
-            <h1>🐾 PetClinic Deployment Dashboard</h1>
-            <p class="subtitle">Microservices Deployment Monitoring</p>
+            <h1>PetClinic Deployment Dashboard</h1>
+            <p class="subtitle">Harness CI/CD Pipeline Monitoring</p>
         </div>
         <div class="header-controls">
-            <label for="data-source">Data Source:</label>
-            <input type="text" id="data-source" value="data/deployments.json" placeholder="URL or path to JSON">
-            <button id="load-btn" onclick="loadData()">Load</button>
+            <div class="filter-group">
+                <label for="env-filter">Environment:</label>
+                <select id="env-filter" onchange="loadDashboard()">
+                    <option value="">All</option>
+                    <option value="dev">Dev</option>
+                    <option value="staging">Staging</option>
+                    <option value="prod">Production</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="trigger-filter">Trigger:</label>
+                <select id="trigger-filter" onchange="loadDashboard()">
+                    <option value="">All</option>
+                    <option value="webhook">Webhook</option>
+                    <option value="manual">Manual</option>
+                    <option value="scheduled">Scheduled</option>
+                </select>
+            </div>
+            <button id="refresh-btn" onclick="loadDashboard()">Refresh</button>
         </div>
     </header>
 
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="loading-overlay" style="display:none;">
+        <div class="spinner"></div>
+        <span>Loading deployment data...</span>
+    </div>
+
     <main>
+        <!-- Data source info bar -->
+        <div class="info-bar">
+            <span id="data-source-info">Loading...</span>
+        </div>
+
         <!-- Summary Cards -->
         <section class="summary-cards">
             <div class="card card-total">
-                <div class="card-icon">📦</div>
+                <div class="card-icon">&#128230;</div>
                 <div class="card-body">
                     <h3>Total Deployments</h3>
                     <span class="card-value" id="total-deployments">-</span>
                 </div>
             </div>
             <div class="card card-success">
-                <div class="card-icon">✅</div>
+                <div class="card-icon">&#9989;</div>
                 <div class="card-body">
                     <h3>Successful</h3>
                     <span class="card-value" id="successful-deployments">-</span>
                 </div>
             </div>
             <div class="card card-failed">
-                <div class="card-icon">❌</div>
+                <div class="card-icon">&#10060;</div>
                 <div class="card-body">
                     <h3>Failed</h3>
                     <span class="card-value" id="failed-deployments">-</span>
                 </div>
             </div>
+            <div class="card card-running">
+                <div class="card-icon">&#9654;</div>
+                <div class="card-body">
+                    <h3>Running</h3>
+                    <span class="card-value" id="running-deployments">-</span>
+                </div>
+            </div>
             <div class="card card-rate">
-                <div class="card-icon">📊</div>
+                <div class="card-icon">&#128200;</div>
                 <div class="card-body">
                     <h3>Success Rate</h3>
                     <span class="card-value" id="success-rate">-</span>
@@ -61,15 +95,15 @@
                 <canvas id="chart-per-service"></canvas>
             </div>
             <div class="chart-container">
-                <h2>Success vs Failure by Service</h2>
+                <h2>Success / Failure / Running by Service</h2>
                 <canvas id="chart-success-failure"></canvas>
             </div>
         </section>
 
-        <!-- Charts Row 2 -->
+        <!-- Charts Row 2: Trends -->
         <section class="charts-row">
             <div class="chart-container wide">
-                <h2>Deployment Trends Over Time</h2>
+                <h2>Deployment Trends Over Time (Last 30 Days)</h2>
                 <canvas id="chart-trends"></canvas>
             </div>
         </section>
@@ -81,22 +115,37 @@
                 <canvas id="chart-failure-rate"></canvas>
             </div>
             <div class="chart-container">
-                <h2>Deployment Status Distribution</h2>
+                <h2>Status Distribution</h2>
                 <canvas id="chart-status-distribution"></canvas>
+            </div>
+        </section>
+
+        <!-- Charts Row 4: Environment & Trigger -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Deployments by Environment</h2>
+                <canvas id="chart-environments"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>Trigger Types</h2>
+                <canvas id="chart-triggers"></canvas>
             </div>
         </section>
 
         <!-- Recent Deployments Table -->
         <section class="table-section">
-            <h2>Recent Deployments</h2>
+            <h2>Recent Deployments (Last 50)</h2>
             <div class="table-wrapper">
                 <table id="deployments-table">
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Service</th>
+                            <th>Pipeline</th>
                             <th>Timestamp</th>
                             <th>Version</th>
+                            <th>Environment</th>
+                            <th>Trigger</th>
                             <th>Status</th>
                             <th>Duration</th>
                             <th>Error</th>
@@ -110,9 +159,12 @@
     </main>
 
     <footer>
-        <p>PetClinic Microservices Deployment Dashboard &mdash; Data refreshes on load</p>
+        <p>PetClinic Microservices &mdash; Harness Deployment Dashboard</p>
+        <p class="footer-note">Data source: <code>HarnessDataService</code> (set <code>config.useMockData = false</code> to connect to real Harness API)</p>
     </footer>
 
+    <!-- Load HarnessDataService before dashboard.js -->
+    <script src="services/harness-data-service.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>

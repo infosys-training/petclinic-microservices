@@ -1,113 +1,132 @@
 # PetClinic Microservices - Deployment Dashboard
 
-A lightweight, standalone deployment monitoring dashboard for the PetClinic Microservices project. Built with vanilla HTML, CSS, and JavaScript using [Chart.js](https://www.chartjs.org/) for visualizations.
+A lightweight deployment monitoring dashboard for the PetClinic Microservices project, designed to integrate with **Harness CI/CD**. Built with vanilla HTML, CSS, and JavaScript using [Chart.js](https://www.chartjs.org/) for visualizations.
 
 ## Features
 
-- **Summary Cards**: Total deployments, successful, failed, and success rate at a glance
-- **Per-Service Breakdown**: Bar chart showing deployment counts per microservice
-- **Success vs Failure Stacked Chart**: Visualize success/failure distribution by service
-- **Deployment Trends**: Line chart showing deployment activity over time
+- **Summary Cards**: Total, successful, failed, and running deployments with success rate
+- **Per-Service Breakdown**: Deployment counts for all 8 microservices
+- **Success/Failure/Running Stacked Chart**: Status distribution by service
+- **Deployment Trends**: 30-day line chart showing daily deployment activity
 - **Failure Rate Analysis**: Identify services with high failure rates
-- **Status Distribution**: Doughnut chart for overall success/failure ratio
-- **Recent Deployments Table**: Sortable table with deployment details and error messages
-- **Configurable Data Source**: Load data from any JSON file or API endpoint
+- **Environment Breakdown**: Deployments by dev/staging/prod
+- **Trigger Type Distribution**: Webhook, manual, and scheduled triggers
+- **Recent Deployments Table**: Detailed view with pipeline names, environments, triggers, and error messages
+- **Interactive Filters**: Filter by environment and trigger type
+- **Abstracted Data Layer**: `HarnessDataService` module for easy API integration
 
 ## Quick Start
 
-### Option 1: Open directly in a browser
-
 ```bash
 cd deployment-dashboard
-# Use any local HTTP server (required for JSON fetch)
 python3 -m http.server 8000
-# Then open http://localhost:8000
+# Open http://localhost:8000
 ```
 
-### Option 2: Use any static file server
+Or use any static file server (`npx serve`, nginx, etc.).
 
-```bash
-npx serve deployment-dashboard
-```
-
-## Data Source Configuration
-
-The dashboard reads deployment data from a configurable JSON source. By default, it loads from `data/deployments.json`.
-
-You can change the data source at runtime by entering a URL or file path in the header input field and clicking **Load**.
-
-### JSON Schema
-
-The data source must conform to this structure:
-
-```json
-{
-  "metadata": {
-    "project": "petclinic-microservices",
-    "generated_at": "2026-06-16T14:00:00Z",
-    "data_source": "CI/CD Pipeline"
-  },
-  "services": [
-    "api-gateway",
-    "customers-service",
-    "vets-service"
-  ],
-  "deployments": [
-    {
-      "id": "dep-001",
-      "service": "api-gateway",
-      "timestamp": "2026-06-01T08:30:00Z",
-      "status": "success",
-      "version": "4.0.1",
-      "environment": "production",
-      "duration_seconds": 120,
-      "error": null
-    }
-  ]
-}
-```
-
-### Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | string | Yes | Unique deployment identifier |
-| `service` | string | Yes | Service name (e.g., `api-gateway`) |
-| `timestamp` | string (ISO 8601) | Yes | When the deployment occurred |
-| `status` | string | Yes | `"success"` or `"failed"` |
-| `version` | string | No | Deployed version |
-| `environment` | string | No | Target environment |
-| `duration_seconds` | number | No | Deployment duration |
-| `error` | string | No | Error message (for failed deployments) |
-
-## Integrating with CI/CD
-
-To populate real deployment data, you can:
-
-1. **GitHub Actions**: Add a step that appends to `deployments.json` after each deployment
-2. **Jenkins**: Use a post-build action to write deployment records
-3. **Custom API**: Point the dashboard to an API endpoint that returns the JSON schema above
-4. **Database**: Use a lightweight API layer to query a database and return the expected format
-
-### Example GitHub Actions integration
-
-```yaml
-- name: Record deployment
-  run: |
-    echo '{"id":"dep-${{ github.run_id }}","service":"${{ matrix.service }}","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","status":"${{ job.status }}","version":"${{ github.sha }}"}' >> deployment-dashboard/data/deployments.json
-```
-
-## Project Structure
+## Architecture
 
 ```
 deployment-dashboard/
-├── index.html          # Main dashboard page
-├── styles.css          # Dashboard styles
-├── dashboard.js        # Chart rendering and data loading logic
-├── data/
-│   └── deployments.json  # Sample deployment data
-└── README.md           # This file
+├── index.html                      # Dashboard page
+├── styles.css                      # UI styles
+├── dashboard.js                    # Chart rendering & UI logic
+├── services/
+│   └── harness-data-service.js     # Data abstraction layer (swap mock for real API here)
+└── README.md
 ```
+
+### Data Flow
+
+```
+HarnessDataService (services/harness-data-service.js)
+       │
+       ├── config.useMockData = true  → generates realistic mock data
+       │
+       └── config.useMockData = false → calls Harness Pipeline Execution API
+              │
+              └── requires: apiKey, accountId, orgIdentifier, projectIdentifier
+```
+
+## Connecting to Real Harness API
+
+Only **one file** needs to change: `services/harness-data-service.js`
+
+1. Open the file and update the `config` object:
+
+```javascript
+const config = {
+    useMockData: false,                           // ← Switch to real API
+    baseUrl: 'https://app.harness.io',            // or your Harness instance URL
+    apiKey: 'YOUR_HARNESS_API_KEY',               // x-api-key
+    accountId: 'YOUR_ACCOUNT_ID',                 // Harness account identifier
+    orgIdentifier: 'your_org',                    // Harness org
+    projectIdentifier: 'petclinic_microservices', // Harness project
+};
+```
+
+2. That's it. The dashboard will automatically fetch real pipeline execution data from Harness.
+
+### Required Harness Permissions
+
+The API key needs these permissions:
+- `pipeline: execute` (read-only access to pipeline executions)
+- `project: viewer` (view project resources)
+
+### Harness API Reference
+
+The service uses the [Pipeline Execution Summary API](https://apidocs.harness.io/tag/Pipeline-Execution-Details#operation/getListOfExecutions):
+```
+POST /pipeline/api/pipelines/execution/summary?accountIdentifier={accountId}&orgIdentifier={org}&projectIdentifier={project}
+```
+
+## Mock Data Details
+
+The mock data generator simulates:
+- **8 services**: customers-service, vets-service, visits-service, api-gateway, config-server, discovery-server, genai-service, admin-server
+- **30 days** of deployment history
+- **~85% success rate** (slightly lower for genai-service)
+- **3 environments**: dev (40%), staging (30%), prod (30%)
+- **3 trigger types**: webhook (55%), manual (25%), scheduled (20%)
+- **Realistic pipeline names**: e.g., `deploy-customers-pipeline`
+- **Varied deployment durations** and **realistic error messages**
+- **Seeded random** for reproducible data across refreshes
+
+## Extending the Dashboard
+
+### Adding a new data source
+
+Implement the same interface as `HarnessDataService`:
+
+```javascript
+const MyDataService = {
+    async getDeployments(options) {
+        // options: { startDate, endDate, services, environments }
+        // Return: { metadata: {...}, deployments: [...] }
+    },
+    async getDeploymentStats(options) { ... },
+    async getDeploymentTrends(options) { ... },
+};
+```
+
+### Deployment record schema
+
+Each deployment object has:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique execution ID |
+| `service` | string | Service name (e.g., `customers-service`) |
+| `pipelineName` | string | Harness pipeline identifier |
+| `timestamp` | ISO 8601 | Deployment start time |
+| `endTimestamp` | ISO 8601 | Deployment end time |
+| `status` | string | `success`, `failed`, or `running` |
+| `environment` | string | `dev`, `staging`, or `prod` |
+| `triggerType` | string | `webhook`, `manual`, or `scheduled` |
+| `version` | string | Build version |
+| `duration_seconds` | number | Duration in seconds |
+| `error` | string/null | Error message for failed deployments |
 
 ## Browser Support
 

@@ -11,7 +11,10 @@ WORKDIR application
 ARG EXPOSED_PORT
 EXPOSE ${EXPOSED_PORT}
 
+ENV SERVER_PORT=${EXPOSED_PORT}
 ENV SPRING_PROFILES_ACTIVE=docker
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder application/dependencies/ ./
 
@@ -25,4 +28,7 @@ RUN true
 COPY --from=builder application/snapshot-dependencies/ ./
 RUN true
 COPY --from=builder application/application/ ./
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
+  CMD curl -f http://localhost:${SERVER_PORT}/actuator/health || exit 1
+
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

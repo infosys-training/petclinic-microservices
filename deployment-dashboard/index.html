@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetClinic Microservices - Deployment Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🐾 PetClinic Deployment Dashboard</h1>
+            <p class="subtitle">Microservices Deployment Monitoring</p>
+        </div>
+        <div class="header-controls">
+            <label for="data-source">Data Source:</label>
+            <input type="text" id="data-source" value="data/deployments.json" placeholder="URL or path to JSON">
+            <button id="load-btn" onclick="loadData()">Load</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card card-total">
+                <div class="card-icon">📦</div>
+                <div class="card-body">
+                    <h3>Total Deployments</h3>
+                    <span class="card-value" id="total-deployments">-</span>
+                </div>
+            </div>
+            <div class="card card-success">
+                <div class="card-icon">✅</div>
+                <div class="card-body">
+                    <h3>Successful</h3>
+                    <span class="card-value" id="successful-deployments">-</span>
+                </div>
+            </div>
+            <div class="card card-failed">
+                <div class="card-icon">❌</div>
+                <div class="card-body">
+                    <h3>Failed</h3>
+                    <span class="card-value" id="failed-deployments">-</span>
+                </div>
+            </div>
+            <div class="card card-rate">
+                <div class="card-icon">📊</div>
+                <div class="card-body">
+                    <h3>Success Rate</h3>
+                    <span class="card-value" id="success-rate">-</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Row 1 -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Deployments Per Service</h2>
+                <canvas id="chart-per-service"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>Success vs Failure by Service</h2>
+                <canvas id="chart-success-failure"></canvas>
+            </div>
+        </section>
+
+        <!-- Charts Row 2 -->
+        <section class="charts-row">
+            <div class="chart-container wide">
+                <h2>Deployment Trends Over Time</h2>
+                <canvas id="chart-trends"></canvas>
+            </div>
+        </section>
+
+        <!-- Charts Row 3 -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Failure Rate by Service</h2>
+                <canvas id="chart-failure-rate"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>Deployment Status Distribution</h2>
+                <canvas id="chart-status-distribution"></canvas>
+            </div>
+        </section>
+
+        <!-- Recent Deployments Table -->
+        <section class="table-section">
+            <h2>Recent Deployments</h2>
+            <div class="table-wrapper">
+                <table id="deployments-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Service</th>
+                            <th>Timestamp</th>
+                            <th>Version</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deployments-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>PetClinic Microservices Deployment Dashboard &mdash; Data refreshes on load</p>
+    </footer>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

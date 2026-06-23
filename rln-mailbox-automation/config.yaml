@@ -1,0 +1,110 @@
+# RLN Mailbox Automation Configuration
+# ======================================
+
+mailbox:
+  # Exchange server connection details
+  server: "outlook.office365.com"  # Exchange server URL
+  email: "your_email@company.com"
+  # Password should be set via environment variable: RLN_MAILBOX_PASSWORD
+  # For OAuth2, set auth_type to "oauth2" and provide client_id/tenant_id
+  auth_type: "basic"  # "basic" or "oauth2"
+  # OAuth2 settings (only if auth_type is "oauth2")
+  # client_id: "your-azure-app-client-id"
+  # client_secret_env: "RLN_OAUTH_CLIENT_SECRET"
+  # tenant_id: "your-azure-tenant-id"
+
+email_filter:
+  # Filter criteria for finding RLN emails
+  subject_contains: "RLN"          # Subject line must contain this
+  sender_filter: ""                 # Filter by sender email (leave empty for any)
+  folder: "Inbox"                   # Mailbox folder to search
+  days_back: 7                      # Look back N days from today
+  attachment_extensions:             # Only process these file types
+    - ".xlsx"
+    - ".xls"
+
+output:
+  download_dir: "./downloads"       # Where to save downloaded attachments
+  report_dir: "./reports"           # Where to save validation reports
+  report_format: "excel"            # "excel", "csv", or "json"
+
+# Validation Rules
+# =================
+# Each rule has:
+#   - name: Human-readable rule name
+#   - type: Rule type (see below)
+#   - params: Parameters specific to the rule type
+#
+# Rule types:
+#   - required_columns: Check that specific columns exist
+#   - no_empty_cells: Check that specified columns have no blank values
+#   - numeric_range: Validate numeric values are within min/max
+#   - date_format: Validate date columns match expected format
+#   - unique_values: Ensure no duplicates in specified columns
+#   - regex_match: Validate cell values match a regex pattern
+#   - sum_check: Validate that a column sums to an expected total
+#   - cross_reference: Compare values against a reference Excel file
+#   - row_count: Ensure minimum/maximum row count
+#   - value_in_list: Ensure column values are from an allowed set
+
+validation_rules:
+  - name: "Required columns present"
+    type: "required_columns"
+    params:
+      columns:
+        - "RLN Number"
+        - "Date"
+        - "Amount"
+        - "Currency"
+        - "Beneficiary Name"
+        - "Bank Reference"
+
+  - name: "No empty RLN numbers"
+    type: "no_empty_cells"
+    params:
+      columns:
+        - "RLN Number"
+        - "Amount"
+        - "Beneficiary Name"
+
+  - name: "Amount must be positive"
+    type: "numeric_range"
+    params:
+      column: "Amount"
+      min: 0.01
+      max: null  # No upper limit
+
+  - name: "Valid date format"
+    type: "date_format"
+    params:
+      column: "Date"
+      format: "%Y-%m-%d"  # Expected: 2024-01-15
+
+  - name: "Unique RLN numbers"
+    type: "unique_values"
+    params:
+      columns:
+        - "RLN Number"
+
+  - name: "Valid currency codes"
+    type: "value_in_list"
+    params:
+      column: "Currency"
+      allowed_values:
+        - "USD"
+        - "EUR"
+        - "GBP"
+        - "INR"
+        - "JPY"
+
+  - name: "Bank reference format"
+    type: "regex_match"
+    params:
+      column: "Bank Reference"
+      pattern: "^[A-Z0-9]{8,16}$"  # Alphanumeric, 8-16 chars
+
+  - name: "Minimum row count"
+    type: "row_count"
+    params:
+      min: 1
+      max: null

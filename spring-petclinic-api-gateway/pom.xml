@@ -15,14 +15,14 @@
     </parent>
 
     <properties>
-        <webjars-bootstrap.version>5.3.3</webjars-bootstrap.version>
+        <webjars-bootstrap.version>5.3.8</webjars-bootstrap.version>
         <webjars-font-awesome.version>4.7.0</webjars-font-awesome.version>
         <webjars-angular.version>1.8.3</webjars-angular.version>
         <webjars-angular-ui-router.version>1.0.30</webjars-angular-ui-router.version>
-        <webjars-marked.version>14.1.2</webjars-marked.version>
-        <squareup-okhttp3.version>5.0.0-alpha.14</squareup-okhttp3.version>
+        <webjars-marked.version>18.0.10</webjars-marked.version>
+        <squareup-okhttp3.version>5.5.0</squareup-okhttp3.version>
 
-        <libsass-maven-plugin.version>0.2.29</libsass-maven-plugin.version>
+        <libsass-maven-plugin.version>0.3.4</libsass-maven-plugin.version>
         <docker.image.exposed.port>8081</docker.image.exposed.port>
         <docker.image.dockerfile.dir>${basedir}/../docker</docker.image.dockerfile.dir>
     </properties>
@@ -141,16 +141,6 @@
         </dependency>
 
         <!-- Testing -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
